@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Stock Support Analyzer</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.development.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.development.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/react-chartjs-2@5.2.0/dist/index.umd.js"></script>
+    </head>
+    <body>
+        <div id="root"></div>
+        <script type="text/babel">
+            const { useState, useEffect } = React;
+            const { Line } = window.ReactChartjs2; // Correctly access the UMD global
+
+            const companies = [
+                { name: 'Reliance Industries Ltd.', ticker: 'RELIANCE.NS' },
+                { name: 'HDFC Bank Ltd.', ticker: 'HDFCBANK.NS' },
+                { name: 'ICICI Bank Ltd.', ticker: 'ICICIBANK.NS' },
+                { name: 'Infosys Ltd.', ticker: 'INFY.NS' },
+                { name: 'Tata Consultancy Services Ltd.', ticker: 'TCS.NS' },
+                { name: 'Hindustan Unilever Ltd.', ticker: 'HINDUNILVR.NS' },
+                { name: 'Asian Paints Ltd.', ticker: 'ASIANPAINT.NS' },
+                { name: 'ITC Ltd.', ticker: 'ITC.NS' },
+                { name: 'Kotak Mahindra Bank Ltd.', ticker: 'KOTAKBANK.NS' },
+                { name: 'Titan Company Ltd.', ticker: 'TITAN.NS' },
+                { name: 'Bajaj Auto Ltd.', ticker: 'BAJAJ-AUTO.NS' },
+                { name: 'Havells India Ltd.', ticker: 'HAVELLS.NS' },
+                { name: 'Britannia Industries Ltd.', ticker: 'BRITANNIA.NS' },
+                { name: 'HDFC Life Insurance Co. Ltd.', ticker: 'HDFCLIFE.NS' },
+                { name: 'Pidilite Industries Ltd.', ticker: 'PIDILITIND.NS' },
+                { name: 'ICICI Lombard General Insurance Co. Ltd.', ticker: 'ICICIGI.NS' },
+                { name: 'Avenue Supermarts Ltd. (DMart)', ticker: 'DMART.NS' },
+                { name: 'Jubilant FoodWorks Ltd.', ticker: 'JUBLFOOD.NS' },
+                { name: 'Zomato Ltd.', ticker: 'ZOMATO.NS' },
+                { name: 'Relaxo Footwears Ltd.', ticker: 'RELAXO.NS' },
+                { name: 'Devyani International Ltd.', ticker: 'DEVYANI.NS' },
+                { name: 'VIP Industries Ltd.', ticker: 'VIPIND.NS' },
+                { name: 'Restaurant Brands Asia Ltd.', ticker: 'RBA.NS' },
+                { name: 'Berger Paints India Ltd.', ticker: 'BERGEPAINT.NS' },
+            ];
+
+            function App() {
+                const [selectedCompany, setSelectedCompany] = useState(companies[0].ticker);
+                const [timeframe, setTimeframe] = useState('1d');
+                const [chartData, setChartData] = useState({ labels: [], datasets: [] });
+                const [loading, setLoading] = useState(false);
+
+                useEffect(() => {
+                    async function fetchData() {
+                        setLoading(true);
+                        try {
+                            const response = await fetch(
+                                `http://localhost:5000/api/data?ticker=${selectedCompany}&interval=${timeframe}`
+                            );
+                            const data = await response.json();
+                            const dates = data.map((d) => d.Datetime);
+                            const closes = data.map((d) => d.Close);
+                            const supports = data
+                                .filter((d) => d.support)
+                                .map((d) => ({ x: d.Datetime, yMin: d.supportMin, yMax: d.supportMax }));
+
+                            setChartData({
+                                labels: dates,
+                                datasets: [
+                                    {
+                                        label: 'Close Price',
+                                        data: closes,
+                                        borderColor: 'blue',
+                                        fill: false,
+                                        tension: 0.1,
+                                    },
+                                    ...supports.map((s, i) => ({
+                                        label: `Support ${i + 1} (${s.yMin}-${s.yMax})`,
+                                        data: [
+                                            { x: s.x, y: s.yMin },
+                                            { x: s.x, y: s.yMax },
+                                        ],
+                                        backgroundColor: 'rgba(0, 255, 0, 0.3)',
+                                        borderColor: 'rgba(0, 255, 0, 1)',
+                                        fill: '+1', // Fill between min and max
+                                        pointRadius: 0,
+                                    })),
+                                ],
+                            });
+                        } catch (error) {
+                            console.error('Error fetching data:', error);
+                        }
+                        setLoading(false);
+                    }
+                    fetchData();
+                }, [selectedCompany, timeframe]);
+
+                return (
+                    <div className="container mx-auto p-4">
+                        <h1 className="text-2xl font-bold mb-4">Stock Support Analyzer</h1>
+                        <div className="mb-4 flex space-x-4">
+                            <select
+                                value={selectedCompany}
+                                onChange={(e) => setSelectedCompany(e.target.value)}
+                                className="p-2 border rounded"
+                            >
+                                {companies.map((company) => (
+                                    <option key={company.ticker} value={company.ticker}>
+                                        {company.name}
+                                    </option>
+                                ))}
+                            </select>
+                            <select
+                                value={timeframe}
+                                onChange={(e) => setTimeframe(e.target.value)}
+                                className="p-2 border rounded"
+                            >
+                                <option value="1h">1 Hour</option>
+                                <option value="1d">1 Day</option>
+                            </select>
+                        </div>
+                        {loading ? (
+                            <p className="text-center">Loading...</p>
+                        ) : (
+                            <div>
+                                <Line
+                                    data={chartData}
+                                    options={{ scales: { x: { type: 'time' }, y: { beginAtZero: false } } }}
+                                />
+                            </div>
+                        )}
+                    </div>
+                );
+            }
+
+            ReactDOM.render(<App />, document.getElementById('root'));
+        </script>
+    </body>
+</html>
