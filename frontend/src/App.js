@@ -64,15 +64,17 @@ function App() {
                             borderColor: 'blue',
                             fill: false,
                             tension: 0.1,
+                            pointRadius: 2, // Keep points for close price
+                            pointBorderWidth: 0,
                         },
                         ...supports.map((s, i) => ({
                             label: `Support ${i + 1} (${s.yMin}-${s.yMax})`,
-                            data: dates.map((date) => ({ x: date, y: s.yMin })), // Horizontal line at yMin across all dates
+                            data: dates.map((date) => ({ x: date, y: s.yMin })), // Horizontal line at yMin
                             backgroundColor: 'rgba(0, 255, 0, 0.3)',
                             borderColor: 'rgba(0, 255, 0, 1)',
-                            fill: false, // Remove fill to avoid overlap
+                            fill: false,
                             borderWidth: 2,
-                            pointRadius: 0, // Hide points
+                            pointRadius: 0, // Remove points from support lines
                         })),
                     ],
                 });
